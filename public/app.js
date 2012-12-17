@@ -4138,7 +4138,7 @@ module.exports = function(stage, arena){
 
 });
 
-require.define("/console/lib/maketrix.js",function(require,module,exports,__dirname,__filename,process){var $M = require('./sylvester').$M;
+require.define("/console/lib/maketrix.js",function(require,module,exports,__dirname,__filename,process){var $M = require('../sylvester/lib/node-sylvester').$M;
 var deg2rad = Math.PI / 180;
 
 module.exports = generateMatrix;
