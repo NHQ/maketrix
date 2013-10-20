@@ -3822,7 +3822,7 @@ function through (write, end) {
 
 });
 
-require.define("/console/lib/grid-map.js",function(require,module,exports,__dirname,__filename,process){var win = require('./screen')()
+require.define("/css3d/lib/grid-map.js",function(require,module,exports,__dirname,__filename,process){var win = require('./screen')()
   , gridLayer = require('gridlayer')
   , utils = require('./getCSSPrimitiveValue')
   ;
@@ -3868,7 +3868,7 @@ module.exports = function(id, resx, resy){
 }
 });
 
-require.define("/console/lib/screen.js",function(require,module,exports,__dirname,__filename,process){module.exports = function(){
+require.define("/css3d/lib/screen.js",function(require,module,exports,__dirname,__filename,process){module.exports = function(){
 
   var data = [];
 
@@ -3942,7 +3942,7 @@ function toMatrix(quantiles) {
       return matrix
     }});
 
-require.define("/console/lib/getCSSPrimitiveValue.js",function(require,module,exports,__dirname,__filename,process){module.exports = function(propValue){
+require.define("/css3d/lib/getCSSPrimitiveValue.js",function(require,module,exports,__dirname,__filename,process){module.exports = function(propValue){
     var valueType = propValue.__proto__.constructor.name
     ;
     switch(valueType.toLowerCase()){
@@ -4107,17 +4107,80 @@ function CSSGetPrimitiveValue(value) {
 };
 });
 
-require.define("/console/lib/matrix.js",function(require,module,exports,__dirname,__filename,process){var generateMatrix = require('./maketrix');
+require.define("/css3d/lib/spherical-context.js",function(require,module,exports,__dirname,__filename,process){var matrix = require('./matrix')
+
+module.exports = function(radius, perspective){
+
+  var wx = window.innerWidth
+    , wy = window.innerHeight
+    , bcode = '-webkit-'
+  ;
+
+  var style = document.createElement('style')
+    , stage = document.createElement('div')
+    , arena = document.createElement('div')
+  ; 
+
+  stage.classList.add('maketrix-stage');
+  arena.classList.add('maketrix-arena');
+  arena.id = 'mx-arena';
+  stage.id = 'mx-stage';
+//  stage.appendChild(arena)
+  document.body.appendChild(arena);
+
+  style.textContent = CSS(radius, perspective, bcode);
+  style.id = 'maketrix-style';
+  document.body.appendChild(style);
+  style = Array.prototype.slice.call(document.styleSheets)
+	  .reduce(function(acc, e){ 
+	    if(e.ownerNode.id == 'maketrix-style') return e}, []);
+  console.log(style);
+
+  window.addEventListener('mousemove', function(e){
+      document.body.style['-webkit-perspective'] = e.clientY *2;
+
+      arena.style['-webkit-transform'] = 'translateZ(-'+e.clientX *2+'px)';
+//    style.cssRules[0].style.cssText += '-webkit-perspective:'+e.clientX *2+'px;'
+  }, false);
+  matrix(stage, arena);
+
+//  return {stage: stage, arena: arena, stylesheet: style}
+
+}
+
+function CSS(radius, perspective, bcode){
+    var css = '' +
+	'.maketrix-stage {' +
+	'  width: 1px;' +
+	'  height: 1px;' + 
+	'  margin: 300px auto;' +
+	'  '+bcode+'transform-style: preserve-3d;' +
+	'}' +
+	'.maketrix-arena{'+
+	'  width: 1px;' +
+	'  height: 1px;' +
+	'  margin: 300px auto;' +
+	'  '+bcode+'transform: translateZ(-700px);' +
+	'  '+bcode+'transform-style: preserve-3d;' +
+	'  '+bcode+'transform-origin: 50% 50% -'+0+'px}' + 
+	'.maketrix-object{' +
+	'  position:absolute;' +
+	'}'
+    return css
+}
+});
+
+require.define("/css3d/lib/matrix.js",function(require,module,exports,__dirname,__filename,process){var generateMatrix = require('./maketrix');
 
 module.exports = function(stage, arena){
-
+    var y = plusminus(200);
     var z = 0;
     var a
     , dots = []
     ;
 
 
-    for(a = 1; a <= 360; a++){
+    for(a = 1; a <= 360/2; a++){
 	var dot = document.createElement('div');
 	dot.classList.add('dot');
 	var el = document.createElement('div');
@@ -4126,30 +4189,66 @@ module.exports = function(stage, arena){
 	el.classList.add('maketrix-object');
 	el.id = 'dot' + a;
 	arena.appendChild(el);
-	el.coords = [a * 2, a * 2, 90];
-	el.style['-webkit-transform'] = generateMatrix(a * 10, a, 0, 0, 1)
+	el.coords = [a * 2, a * 2, 90]
+	var t = Math.sin((360 / a / 2)) * 300
+	el.x = 360 * Math.random()
+	el.style['-webkit-transform-origin'] = '50% 50% -'+70+'px ';
+	el.style['-webkit-transform'] = generateMatrix(el.x, a* 2, 0,0,0, 700, 1)
+       el.z = 10
+       el.a = a*2
+//       el.x = 0
+	el.o = 700
     }
 
-    setInterval(function(){
-      arena.style['-webkit-transform'] = generateMatrix(0, z+=2, z / 3, 0, 1);
-    }, 20);
+    function rotate(){
+     z+=11
+      var els = [].slice.call(document.querySelectorAll('.maketrix-object'));
+      els.forEach(function(e){
+	  var q =  z * Math.random();
+        e.style['-webkit-transform'] = generateMatrix(z * Math.random(), z * Math.random(),0,0,0,q, 1);
+	e.style['-webkit-transform-origin'] = '50% 50% -'+q+'px ';
+      })
+      arena.style['-webkit-transform'] = '';
+      arena.style['-webkit-transition'] = '';
+      arena.style['-webkit-transform'] = generateMatrix(0, 0 ,0,0,0, -z, 1);
+      arena.style['-webkit-transition'] = 'all 1s linear';
+    }
+
+    arena.addEventListener( 'webkitTransitionEnd', rotate, false );
+    setInterval(rotate, 100);
+
 
 }
 
+function plusminus(num){
+
+  var flip = true
+  num = num;
+
+  return function(){
+    flip = !flip;
+    var a = flip ? num : num * -1
+    return a * Math.random()
+  }
+
+}
 });
 
-require.define("/console/lib/maketrix.js",function(require,module,exports,__dirname,__filename,process){var $M = require('../sylvester/lib/node-sylvester').$M;
+require.define("/css3d/lib/maketrix.js",function(require,module,exports,__dirname,__filename,process){// returns a CSS string for matrix3D 
+
+var $M = require('../sylvester/lib/node-sylvester').$M;
+window.myth = require('../sylvester/lib/node-sylvester');
 var deg2rad = Math.PI / 180;
 
 module.exports = generateMatrix;
 
-function generateMatrix(rotateX, rotateY, rotateZ, translateZ, scale){
+function generateMatrix(rotateX, rotateY, rotateZ, tx, ty, translateZ, scale){
     var rotationXMatrix, rotationYMatrix, rotationZMatrix, s, scaleMatrix, transformationMatrix, translationMatrix;
     rotationXMatrix = $M([[1, 0, 0, 0], [0, Math.cos(rotateX * deg2rad), Math.sin(-rotateX * deg2rad), 0], [0, Math.sin(rotateX * deg2rad), Math.cos(rotateX * deg2rad), 0], [0, 0, 0, 1]]);
     rotationYMatrix = $M([[Math.cos(rotateY * deg2rad), 0, Math.sin(rotateY * deg2rad), 0], [0, 1, 0, 0], [Math.sin(-rotateY * deg2rad), 0, Math.cos(rotateY * deg2rad), 0], [0, 0, 0, 1]]);
     rotationZMatrix = $M([[Math.cos(rotateZ * deg2rad), Math.sin(-rotateZ * deg2rad), 0, 0], [Math.sin(rotateZ * deg2rad), Math.cos(rotateZ * deg2rad), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]);
     scaleMatrix = $M([[scale, 0, 0, 0], [0, scale, 0, 0], [0, 0, scale, 0], [0, 0, 0, 1]]);
-    translationMatrix = $M([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0],[0, 0, translateZ, 1]]);
+    translationMatrix = $M([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0],[tx, ty, translateZ, 1]]);
  //   translationMatrix = $M([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [Math.sin(rotateX * deg2rad) * 250 + 250, Math.sin(rotateY * deg2rad) * 150 + 150, 0, 1]]);
     transformationMatrix = rotationXMatrix.x(rotationYMatrix).x(rotationZMatrix).x(scaleMatrix).x(translationMatrix);
     s = "matrix3d(";
@@ -4162,7 +4261,7 @@ function generateMatrix(rotateX, rotateY, rotateZ, translateZ, scale){
 }
 });
 
-require.define("/console/lib/sylvester/lib/node-sylvester/index.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel
+require.define("/css3d/lib/sylvester/lib/node-sylvester/index.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel
 
 exports.Vector = require('./vector');
 exports.$V = exports.Vector.create;
@@ -4176,7 +4275,7 @@ exports.Line.Segment = require('./line.segment');
 exports.Sylvester = require('./sylvester');
 });
 
-require.define("/console/lib/sylvester/lib/node-sylvester/vector.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
+require.define("/css3d/lib/sylvester/lib/node-sylvester/vector.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
 // This file is required in order for any other classes to work. Some Vector methods work with the
 // other Sylvester classes and are useless unless they are included. Other classes such as Line and
 // Plane will not function at all without Vector being loaded first.
@@ -4616,7 +4715,7 @@ Vector.log = function(v) {
 module.exports = Vector;
 });
 
-require.define("/console/lib/sylvester/lib/node-sylvester/sylvester.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
+require.define("/css3d/lib/sylvester/lib/node-sylvester/sylvester.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
 // This file is required in order for any other classes to work. Some Vector methods work with the
 // other Sylvester classes and are useless unless they are included. Other classes such as Line and
 // Plane will not function at all without Vector being loaded first.           
@@ -4633,7 +4732,7 @@ var Sylvester = {
 module.exports = Sylvester;
 });
 
-require.define("/console/lib/sylvester/lib/node-sylvester/matrix.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
+require.define("/css3d/lib/sylvester/lib/node-sylvester/matrix.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
 // Matrix class - depends on Vector.
 
 var fs = require('fs');
@@ -5674,7 +5773,7 @@ module.exports = Matrix;
 require.define("fs",function(require,module,exports,__dirname,__filename,process){// nothing to see here... no file methods for the browser
 });
 
-require.define("/console/lib/sylvester/lib/node-sylvester/line.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
+require.define("/css3d/lib/sylvester/lib/node-sylvester/line.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
 var Vector = require('./vector');
 var Matrix = require('./matrix');
 var Plane = require('./plane');
@@ -5907,7 +6006,7 @@ Line.Z = Line.create(Vector.Zero(3), Vector.k);
 module.exports = Line;
 });
 
-require.define("/console/lib/sylvester/lib/node-sylvester/plane.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
+require.define("/css3d/lib/sylvester/lib/node-sylvester/plane.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
 // Plane class - depends on Vector. Some methods require Matrix and Line.
 var Vector = require('./vector');
 var Matrix = require('./matrix');
@@ -6183,7 +6282,7 @@ Plane.fromPoints = function(points) {
 module.exports = Plane;
 });
 
-require.define("/console/lib/sylvester/lib/node-sylvester/line.segment.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
+require.define("/css3d/lib/sylvester/lib/node-sylvester/line.segment.js",function(require,module,exports,__dirname,__filename,process){// Copyright (c) 2011, Chris Umbel, James Coglan
 // Line.Segment class - depends on Line and its dependencies.
 
 var Line = require('./line');
@@ -6311,61 +6410,13 @@ Line.Segment.create = function(v1, v2) {
 module.exports = Line.Segment;
 });
 
-require.define("/console/lib/bundle.js",function(require,module,exports,__dirname,__filename,process){var es = require('event-stream')
+require.define("/css3d/lib/bundle.js",function(require,module,exports,__dirname,__filename,process){var es = require('event-stream')
   , thru = require('through')
   , gridMap = require('./grid-map')
-  , matrix = require('./matrix')
+  , createContext = require('./spherical-context')
   ;
 
-module.exports = function(radius, perspective){
-
-  var wx = window.innerWidth
-    , wy = window.innerHeight
-    , bcode = '-webkit-'
-  ;
-
-  var style = document.createElement('style')
-    , stage = document.createElement('div')
-    , arena = document.createElement('div')
-  ; 
-
-  stage.classList.add('maketrix-stage');
-  arena.classList.add('maketrix-arena');
-  arena.id = 'mx-arena';
-  stage.id = 'mx-stage';
-  stage.appendChild(arena)
-  document.body.appendChild(stage);
-
-  style.textContent = CSS(radius, perspective, bcode);
-  style.id = 'maketrix-style';
-  document.body.appendChild(style);
-  style = Array.prototype.slice.call(document.styleSheets)
-	  .reduce(function(acc, e){ 
-	    if(e.ownerNode.id == 'maketrix-style') return e}, []);
-
-  matrix(stage, arena);
-
-//  return {stage: stage, arena: arena, stylesheet: style}
-
-}(700, 700)
-
-function CSS(radius, perspective, bcode){
-    var css = '' +
-	'.maketrix-stage {' +
-	'  width: 1px;' +
-	'  height: 1px;' + 
-	'  margin: 300px auto;' +
-	'  '+bcode+'perspective: '+perspective+'px;}' +
-	'.maketrix-arena{'+
-	'  width: 1px;' +
-	'  height: 1px;' +
-	'  '+bcode+'transform-style: preserve-3d;' +
-	'  '+bcode+'transform-origin: 50% 50% -'+radius+'px;}' + 
-	'.maketrix-object{' +
-	'  position:absolute;' +
-	'  '+bcode+'transform-origin: 50% 50% -'+radius+'px;}'
-    return css
-}
+createContext(700, 700)
 });
-require("/console/lib/bundle.js");
+require("/css3d/lib/bundle.js");
 })();
